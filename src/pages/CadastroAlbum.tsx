@@ -15,10 +15,30 @@ function CadastroAlbum() {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        console.log('Álbum cadastrado:', form)
-        // Aqui no futuro você envia para o backend com fetch ou axios
+        try {
+            const response = await fetch('http://localhost:8080/albuns', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    titulo: form.nome,
+                    ano_lancamento: form.ano,
+                    preco: form.preco,
+                    genero: form.genero,
+                    artista: form.artista
+                })
+            });
+            if (response.ok) {
+                alert('Álbum cadastrado com sucesso!');
+            } else {
+                alert('Erro ao cadastrar álbum.');
+            }
+        } catch (error) {
+            alert('Erro ao conectar com o servidor.');
+        }
     }
 
     return (

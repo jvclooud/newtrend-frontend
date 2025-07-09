@@ -1,11 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Home.css'
 
 function Home() {
   const [mostrarCadastro, setMostrarCadastro] = useState(false)
+  const [albuns, setAlbuns] = useState<any[]>([])
+
+  const fetchAlbuns = () => {
+    fetch('http://localhost:8080/albuns')
+      .then(res => res.json())
+      .then(data => setAlbuns(data))
+      .catch(() => setAlbuns([]))
+  }
+
+  useEffect(() => {
+    fetchAlbuns()
+  }, [])
 
   const handleAdminClick = () => {
     setMostrarCadastro(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Tem certeza que deseja apagar este álbum?')) {
+      await fetch(`http://localhost:8080/albuns/${id}`, { method: 'DELETE' })
+      fetchAlbuns()
+    }
   }
 
   return (
@@ -47,14 +66,24 @@ function Home() {
       <section className="shop">
         <h2>Shop</h2>
         <div className="grid-albuns">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="card-album">
-              <img src="/placeholder.jpg" alt="Capa do Álbum" />
-              <h3>Starboys</h3>
-              <p>R$ 690,00</p>
-              <button>COMPRAR</button>
-            </div>
-          ))}
+          {albuns.length === 0 ? (
+            <p>Nenhum álbum cadastrado ainda.</p>
+          ) : (
+            albuns.map((album, i) => (
+              <div key={album.id || i} className="card-album">
+                <img src="/placeholder.jpg" alt="Capa do Álbum" />
+                <h3>{album.titulo}</h3>
+                <p><strong>ID:</strong> {album.id}</p>
+                <p>R$ {Number(album.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <button>COMPRAR</button>
+                {mostrarCadastro && (
+                  <button style={{ marginLeft: 8, background: 'red', color: 'white' }} onClick={() => handleDelete(album.id)}>
+                    APAGAR ÁLBUM
+                  </button>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

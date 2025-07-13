@@ -4,12 +4,52 @@ import './Home.css'
 function Home() {
   const [mostrarCadastro, setMostrarCadastro] = useState(false)
   const [albuns, setAlbuns] = useState<any[]>([])
+  const [mensagem, setMensagem] = useState<string | null>(null)
+  const [campoFiltro, setCampoFiltro] = useState('titulo');
+const [valorFiltro, setValorFiltro] = useState('');
+const [albumEditando, setAlbumEditando] = useState<any | null>(null)
+
+
+
+const buscarComFiltro = async () => {
+  if (!valorFiltro.trim()) {
+    fetchAlbuns();
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:8080/albuns/filtro/${campoFiltro}/${encodeURIComponent(valorFiltro)}`);
+    const dados = await res.json();
+    if (!res.ok) {
+      setMensagem(dados.mensagem || 'Erro ao buscar álbuns.');
+      setAlbuns([]);
+    } else {
+      setAlbuns(dados);
+      setMensagem(null);
+    }
+  } catch (erro) {
+    setMensagem('Erro ao buscar álbuns.');
+    setAlbuns([]);
+  }
+};
+
 
   const fetchAlbuns = () => {
     fetch('http://localhost:8080/albuns')
-      .then(res => res.json())
-      .then(data => setAlbuns(data))
-      .catch(() => setAlbuns([]))
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) {
+          setMensagem(data.mensagem || 'Erro ao buscar álbuns.')
+          setAlbuns([])
+        } else {
+          setAlbuns(data)
+          setMensagem(null)
+        }
+      })
+      .catch(() => {
+        setMensagem('Erro de conexão com o servidor.')
+        setAlbuns([])
+      })
   }
 
   useEffect(() => {
@@ -22,8 +62,18 @@ function Home() {
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Tem certeza que deseja apagar este álbum?')) {
-      await fetch(`http://localhost:8080/albuns/${id}`, { method: 'DELETE' })
-      fetchAlbuns()
+      try {
+        const resposta = await fetch(`http://localhost:8080/albuns/${id}`, { method: 'DELETE' })
+        const dados = await resposta.json()
+        if (!resposta.ok) {
+          setMensagem(dados.mensagem || 'Erro ao apagar álbum.')
+        } else {
+          setMensagem('Álbum apagado com sucesso!')
+          fetchAlbuns()
+        }
+      } catch {
+        setMensagem('Erro de conexão com o servidor.')
+      }
     }
   }
 
@@ -42,6 +92,11 @@ function Home() {
           <button onClick={handleAdminClick}>ADMINISTRADOR</button>
         </div>
       </header>
+      {mensagem && (
+        <div className="mensagem-erro" style={{ color: 'red', margin: 16 }}>
+          {mensagem}
+        </div>
+      )}
       <section className="artistas">
         <h2>🌟 Artistas</h2>
         <div className="lista-artistas">
@@ -63,6 +118,66 @@ function Home() {
         </div>
       </section>
 
+      <section style={{ padding: '20px' }}>
+  <h2>🔎 Buscar Álbum</h2>
+  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+    <select value={campoFiltro} onChange={e => setCampoFiltro(e.target.value)}>
+      <option value="titulo">Título</option>
+      <option value="artista">Artista</option>
+      <option value="genero">Gênero</option>
+      <option value="ano_lancamento">Ano de Lançamento</option>
+    </select>
+    <input
+      type="text"
+      value={valorFiltro}
+      onChange={e => setValorFiltro(e.target.value)}
+      placeholder="Digite para pesquisar..."
+    />
+    <button onClick={buscarComFiltro}>Buscar</button>
+    <button onClick={fetchAlbuns}>Limpar</button>
+  </div>
+</section>
+{albumEditando && (
+  <section style={{ padding: '20px', backgroundColor: '#f0f0f0' }}>
+    <h2>✏️ Editar Álbum</h2>
+    <form onSubmit={async e => {
+      e.preventDefault();
+      try {
+        const res = await fetch(`http://localhost:8080/albuns/${albumEditando.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(albumEditando)
+        });
+        const dados = await res.json();
+        if (!res.ok) {
+          setMensagem(dados.mensagem || 'Erro ao atualizar álbum.');
+        } else {
+          setMensagem('Álbum atualizado com sucesso!');
+          setAlbumEditando(null);
+          fetchAlbuns();
+        }
+      } catch {
+        setMensagem('Erro ao conectar com servidor.');
+      }
+    }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <input type="text" value={albumEditando.titulo} onChange={e => setAlbumEditando({ ...albumEditando, titulo: e.target.value })} placeholder="Título" />
+        <input type="text" value={albumEditando.artista} onChange={e => setAlbumEditando({ ...albumEditando, artista: e.target.value })} placeholder="Artista" />
+        <input type="number" value={albumEditando.preco} onChange={e => setAlbumEditando({ ...albumEditando, preco: e.target.value })} placeholder="Preço" />
+        <input type="number" value={albumEditando.ano_lancamento} onChange={e => setAlbumEditando({ ...albumEditando, ano_lancamento: e.target.value })} placeholder="Ano de lançamento" />
+        <input type="text" value={albumEditando.genero} onChange={e => setAlbumEditando({ ...albumEditando, genero: e.target.value })} placeholder="Gênero" />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button type="submit">Salvar</button>
+          <button type="button" onClick={() => setAlbumEditando(null)}>Cancelar</button>
+        </div>
+      </div>
+    </form>
+  </section>
+)}
+
+
       <section className="shop">
         <h2>Shop</h2>
         <div className="grid-albuns">
@@ -77,10 +192,22 @@ function Home() {
                 <p>R$ {Number(album.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 <button>COMPRAR</button>
                 {mostrarCadastro && (
-                  <button style={{ marginLeft: 8, background: 'red', color: 'white' }} onClick={() => handleDelete(album.id)}>
-                    APAGAR ÁLBUM
-                  </button>
-                )}
+  <div style={{ display: 'flex', gap: '8px' }}>
+    <button
+      style={{ background: 'orange', color: 'white' }}
+      onClick={() => setAlbumEditando(album)}
+    >
+      EDITAR
+    </button>
+    <button
+      style={{ background: 'red', color: 'white' }}
+      onClick={() => handleDelete(album.id)}
+    >
+      APAGAR
+    </button>
+  </div>
+)}
+
               </div>
             ))
           )}

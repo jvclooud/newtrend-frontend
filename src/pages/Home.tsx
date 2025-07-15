@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Home.css'
+import { Header } from '../componentes/header'
+
 
 function Home() {
   const [mostrarCadastro, setMostrarCadastro] = useState(false)
@@ -79,19 +81,7 @@ const buscarComFiltro = async () => {
 
   return (
     <div style={{ width: '100%' }}>
-      <header className="header">
-        <div className="logo">NewTrend</div>
-        <nav className="nav">
-          <a href="/">INICIO</a>
-          <a href="#">NOTICIAS</a>
-          <a href="#">EVENTOS</a>
-          {mostrarCadastro && <a href="/cadastro">CADASTRO DE ÁLBUNS</a>}
-        </nav>
-        <div className="actions">
-          <button>USUÁRIO</button>
-          <button onClick={handleAdminClick}>ADMINISTRADOR</button>
-        </div>
-      </header>
+      <Header mostrarCadastro={mostrarCadastro} onAdminClick={handleAdminClick} />
       {mensagem && (
         <div className="mensagem-erro" style={{ color: 'red', margin: 16 }}>
           {mensagem}
